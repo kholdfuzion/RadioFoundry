@@ -1980,10 +1980,49 @@ static int check_name_is_id(void)
 	return bad;
 }
 
+#if CONFIG_UI_SETTINGS && CONFIG_KEY_ASSIGN
+const char *ui_set_item_name(uint8_t g, uint8_t i, bool english, const char **synonyms);
+
+static int check_key_labels(void)
+{
+	const char *syn;
+	const sim_geom_t *geom = sim_geom_find("128x64");
+	sim_reset(geom, SIM_MAP_K);
+	if (strcmp(ui_set_item_name(7, 3, false, &syn), "SK1") != 0 ||
+	    strcmp(ui_set_item_name(7, 4, false, &syn), "SK1 hold") != 0 ||
+	    strcmp(ui_set_item_name(7, 5, false, &syn), "SK2") != 0) {
+		printf("FAIL key labels on first key map\n");
+		return 1;
+	}
+	sim_reset(geom, SIM_MAP_P);
+	if (strcmp(ui_set_item_name(7, 3, false, &syn), "P3") != 0 ||
+	    strcmp(ui_set_item_name(7, 4, false, &syn), "P3 hold") != 0 ||
+	    strcmp(ui_set_item_name(7, 5, false, &syn), "P4") != 0) {
+		printf("FAIL key labels after changing key map\n");
+		return 1;
+	}
+#if CONFIG_LANG_ES
+	char expected[20];
+	lang_set(lang_find(('e' << 8) | 's'));
+	snprintf(expected, sizeof expected, "P3%s", TR(SET_LABEL_KEY_N_HOLD, " hold"));
+	if (strcmp(ui_set_item_name(7, 4, false, &syn), expected) != 0) {
+		printf("FAIL translated key label\n");
+		return 1;
+	}
+	lang_set(LANG_ENGLISH);
+#endif
+	return 0;
+}
+#endif
+
 int main(void)
 {
 	if (check_name_is_id() != 0)
 		return 1;
+#if CONFIG_UI_SETTINGS && CONFIG_KEY_ASSIGN
+	if (check_key_labels() != 0)
+		return 1;
+#endif
 	static const struct { sim_map_t map; const char *name, *geom; } runs[] = {
 		{ SIM_MAP_K, "K DM-1701", "160x120i5" },
 		{ SIM_MAP_M, "M GD-77", "128x64" },

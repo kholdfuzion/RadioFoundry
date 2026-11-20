@@ -69,7 +69,7 @@ static uint16_t priv_index;	// the private contact whose ID is the digits (its n
 uint8_t ui_set_group_count(void);
 tr_id_t ui_set_group_name(uint8_t g);
 uint8_t ui_set_item_count(uint8_t g);
-// The name in the language in use, or in English
+// The name in the language in use, or in English; consume it before the next call.
 const char *ui_set_item_name(uint8_t g, uint8_t i, bool english, const char **synonyms);
 void ui_open_setting(uint8_t g, uint8_t i);
 
