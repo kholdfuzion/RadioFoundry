@@ -3019,7 +3019,7 @@ msgctxt "MYID_LABEL_DMR_ID"
 msgid "DMR ID"
 msgstr "DMR ID"
 
-#: core/ui/ui_menus.c core/ui/ui_position.c
+#: core/ui/ui_menus.c core/ui/ui_position.c core/ui/ui_satellite.c
 msgctxt "VALUE_NOT_SET"
 msgid "Not set"
 msgstr "未设置"
@@ -4404,7 +4404,7 @@ msgctxt "SET_TOAST_SAVED_AS_YOU_CHANGE"
 msgid "Settings are saved as you change them"
 msgstr "设置更改即保存"
 
-#: core/ui/ui_menus.c core/ui/ui_position.c
+#: core/ui/ui_menus.c core/ui/ui_position.c core/ui/ui_satellite.c
 msgctxt "HINT_OK_CHANGE_BACK"
 msgid "OK change  Back"
 msgstr "OK 改  返回"
@@ -4565,6 +4565,21 @@ msgid "Longitude"
 msgstr "经度"
 
 #: core/ui/ui_position.c
+msgctxt "POS_LABEL_ALTITUDE"
+msgid "Altitude"
+msgstr "高度"
+
+#: core/ui/ui_position.c
+msgctxt "POS_ALTITUDE_CLEARED"
+msgid "Altitude cleared"
+msgstr "已清除高度"
+
+#: core/ui/ui_position.c
+msgctxt "POS_TOAST_ALTITUDE"
+msgid "Altitude must be -32767 to 32767 m"
+msgstr "高度范围：-32767 至 32767 米"
+
+#: core/ui/ui_position.c
 msgctxt "POS_TOAST_RANGE"
 msgid "Up to 90 N/S, 180 E/W"
 msgstr "北南 90，东西 180"
@@ -4630,6 +4645,36 @@ msgid "Predicting passes"
 msgstr "正在预测过境"
 
 #: core/ui/ui_satellite.c
+msgctxt "SATELLITE_UTC_DATE"
+msgid "UTC date"
+msgstr "UTC 日期"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_UTC_TIME"
+msgid "UTC time"
+msgstr "UTC 时间"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_SET_UTC"
+msgid "Set UTC"
+msgstr "设置 UTC"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_ENTER_UTC"
+msgid "Enter a valid UTC date and time"
+msgstr "请输入有效的 UTC 日期和时间"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_UTC_SET"
+msgid "UTC set"
+msgstr "UTC 已设置"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_MANUAL_UTC"
+msgid "Manual UTC"
+msgstr "手动 UTC"
+
+#: core/ui/ui_satellite.c
 msgctxt "SATELLITE_NO_TLE_LOAD_SITE"
 msgid "No TLEs: load from site"
 msgstr "无TLE：请从网站加载"
@@ -4640,9 +4685,9 @@ msgid "TLE age"
 msgstr "TLE天数"
 
 #: core/ui/ui_satellite.c
-msgctxt "GPS_TIME_UNAVAILABLE"
-msgid "GPS/time unavailable"
-msgstr "GPS/时间不可用"
+msgctxt "POSITION_TIME_UNAVAILABLE"
+msgid "Position/time unavailable"
+msgstr "位置/时间不可用"
 
 #: core/ui/ui_satellite.c
 msgctxt "NO_PASSES_IN_NEXT_24H"

@@ -100,9 +100,10 @@ If the firmware was built without privacy, the Privacy row is dimmed and OK on i
 | Send position | Off, 1 min, 5 min, 15 min | Off | Send your position at this interval | Dimmed without GPS |
 | Answer GPS requests | On, Off | On | Answer LRRP location requests (Find also finds it as "position"). With no position the answer is "no fix" | Works |
 | Position source | Auto, GPS, Computer, Fixed | Auto | Where your position comes from, for DMR calls, location requests and APRS. See Position below | Works |
-| Fixed position | Latitude, Longitude | Not set | A position you type in, for a radio without GPS or one that stays in place ([how to type it](13-aprs.md#position)) | Works |
+| Fixed position | Latitude, Longitude, Altitude | Not set | Coordinates and altitude you type in, for a radio without GPS or one that stays in place ([how to type coordinates](13-aprs.md#position)). Altitude is in meters and is needed for satellite prediction | Works |
 | Save GPS position | Action | | Save the current GPS fix as the fixed-position fallback. Requires a fresh fix | GPS builds |
 | Send in DMR calls | On, Off | Off | Put your position into your DMR voice calls ([DMR](09-dmr.md#position-in-calls)) | Works |
+| Set UTC | Action | | Enter the current UTC date and time for satellite prediction. The clock runs only while the radio is on; fresh GPS or computer NMEA time takes precedence | Satellite builds |
 
 #### Position
 

@@ -396,11 +396,12 @@ static __attribute__((noinline)) int32_t setting_get_flash(uint8_t id)
 	case UI_SET_POS_SOURCE:
 	case UI_SET_POS_FIXED_LAT:
 	case UI_SET_POS_FIXED_LON:
+	case UI_SET_POS_FIXED_ALT:
 	case UI_SET_POS_DMR_CALLS: {
 		position_cfg_t pc;
 		position_get_cfg(&pc);
 		return id == UI_SET_POS_SOURCE ? pc.pref : id == UI_SET_POS_FIXED_LAT ? pc.fix_lat :
-		       id == UI_SET_POS_FIXED_LON ? pc.fix_lon : pc.dmr_gps;
+		       id == UI_SET_POS_FIXED_LON ? pc.fix_lon : id == UI_SET_POS_FIXED_ALT ? pc.fix_alt_m : pc.dmr_gps;
 	}
 #endif
 	default:
@@ -717,6 +718,7 @@ bool ui_svc_setting_set(uint8_t id, int32_t value)
 	case UI_SET_POS_SOURCE:
 	case UI_SET_POS_FIXED_LAT:
 	case UI_SET_POS_FIXED_LON:
+	case UI_SET_POS_FIXED_ALT:
 	case UI_SET_POS_DMR_CALLS: {
 		position_cfg_t pc;
 		position_get_cfg(&pc);
@@ -732,6 +734,10 @@ bool ui_svc_setting_set(uint8_t id, int32_t value)
 			if (value < -1800000000 || value > 1800000000)
 				return false;
 			pc.fix_lon = value;
+		} else if (id == UI_SET_POS_FIXED_ALT) {
+			if (value < INT16_MIN || value > INT16_MAX)
+				return false;
+			pc.fix_alt_m = (int16_t)value;
 		} else {
 			pc.dmr_gps = value != 0;
 		}

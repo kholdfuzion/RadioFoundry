@@ -419,6 +419,169 @@ static void draw_path(int y, const radio_satellite_view_t *pass, const satellite
 	gfx_text(ui_layout.tiny, cx + 2, cy - radius_y, "N", ui_col.dim);
 }
 
+#if CONFIG_POSITION
+enum { UTC_DATE, UTC_TIME, UTC_SET, UTC_ROWS };
+static uint8_t utc_edit_row = UTC_ROWS;
+static uint8_t utc_digits_n;
+static char utc_digits[8];
+static uint32_t utc_date_value, utc_time_value;
+static bool utc_date_available, utc_time_available;
+
+static void utc_editor_enter(void)
+{
+	uint32_t date_ddmmyy, utc_hms;
+	utc_edit_row = UTC_ROWS;
+	utc_digits_n = 0u;
+	utc_date_available = ui_svc_satellite_utc_fields(&date_ddmmyy, &utc_hms);
+	utc_time_available = utc_date_available;
+	if (utc_date_available) {
+		uint32_t day = date_ddmmyy / 10000u;
+		uint32_t month = date_ddmmyy / 100u % 100u;
+		uint32_t short_year = date_ddmmyy % 100u;
+		uint32_t year = short_year >= 80u ? 1900u + short_year : 2000u + short_year;
+		utc_date_value = year * 10000u + month * 100u + day;
+		utc_time_value = utc_hms;
+	} else {
+		utc_date_value = 0u;
+		utc_time_value = 0u;
+	}
+}
+
+static uint16_t utc_editor_count(void)
+{
+	return UTC_ROWS;
+}
+
+static void utc_editor_text(sbuf_t *b, uint16_t row, bool editing)
+{
+	uint32_t value = row == UTC_DATE ? utc_date_value : utc_time_value;
+	bool available = row == UTC_DATE ? utc_date_available : utc_time_available;
+	uint8_t digits = row == UTC_DATE ? 8u : 6u;
+	if (!editing && !available) {
+		sb_str(b, TR(VALUE_NOT_SET, "Not set"));
+		return;
+	}
+	char text[8];
+	for (int k = digits - 1; k >= 0; k--, value /= 10u)
+		text[k] = (char)('0' + value % 10u);
+	bool typing = editing && (utc_digits_n != 0u || !available);
+	for (uint8_t k = 0u; k < digits; k++) {
+		if (row == UTC_DATE && (k == 4u || k == 6u))
+			sb_chr(b, '-');
+		if (row == UTC_TIME && (k == 2u || k == 4u))
+			sb_chr(b, ':');
+		sb_chr(b, typing && k >= utc_digits_n ? '_' : text[k]);
+	}
+}
+
+static void utc_editor_item(uint16_t row, ui_item_t *item)
+{
+	static const tr_id_t labels[] = {
+		TRN(SATELLITE_UTC_DATE, "UTC date"), TRN(SATELLITE_UTC_TIME, "UTC time"),
+		TRN(SATELLITE_SET_UTC, "Set UTC"),
+	};
+	str_copy(item->label, sizeof(item->label), tr(labels[row]));
+	if (row == UTC_SET)
+		return;
+	sbuf_t b;
+	sb_init(&b, item->value, sizeof(item->value));
+	utc_editor_text(&b, row, utc_edit_row == row);
+	if (utc_edit_row == row)
+		item->flags |= UI_ITEM_EDIT;
+}
+
+static void utc_editor_save_field(uint16_t row)
+{
+	uint8_t digits = row == UTC_DATE ? 8u : 6u;
+	if (utc_digits_n != 0u) {
+		if (utc_digits_n != digits) {
+			if (row == UTC_DATE)
+				utc_date_available = false;
+			else
+				utc_time_available = false;
+			utc_edit_row = UTC_ROWS;
+			utc_digits_n = 0u;
+			return;
+		}
+		uint32_t value = 0u;
+		for (uint8_t k = 0u; k < digits; k++)
+			value = value * 10u + (uint32_t)(utc_digits[k] - '0');
+		if (row == UTC_DATE) {
+			utc_date_value = value;
+			utc_date_available = true;
+		} else {
+			utc_time_value = value;
+			utc_time_available = true;
+		}
+	}
+	utc_edit_row = UTC_ROWS;
+	utc_digits_n = 0u;
+}
+
+static void utc_editor_set(void)
+{
+	if (!utc_date_available || !utc_time_available) {
+		ui_toast(TR(SATELLITE_ENTER_UTC, "Enter a valid UTC date and time"));
+		return;
+	}
+	uint32_t year = utc_date_value / 10000u;
+	uint32_t month = utc_date_value / 100u % 100u;
+	uint32_t day = utc_date_value % 100u;
+	uint32_t date_ddmmyy = day * 10000u + month * 100u + year % 100u;
+	if (year < 1980u || year > 2079u ||
+	    !ui_svc_satellite_set_utc(date_ddmmyy, utc_time_value)) {
+		ui_toast(TR(SATELLITE_ENTER_UTC, "Enter a valid UTC date and time"));
+		return;
+	}
+	ui_svc_satellite_scan(true);
+	ui_toast(TR(SATELLITE_UTC_SET, "UTC set"));
+}
+
+static void utc_editor_select(uint16_t row, bool hold)
+{
+	(void)hold;
+	if (utc_edit_row != UTC_ROWS) {
+		utc_editor_save_field(row);
+	} else if (row == UTC_SET) {
+		utc_editor_set();
+	} else {
+		utc_edit_row = (uint8_t)row;
+		utc_digits_n = 0u;
+	}
+	ui_dirty();
+}
+
+static bool utc_editor_key(const input_event_t *ev)
+{
+	if (utc_edit_row == UTC_ROWS)
+		return false;
+	bool press = ev->gesture == GESTURE_PRESS || ev->gesture == GESTURE_LONG;
+	if (ev->action >= ACT_DIGIT_0 && ev->action <= ACT_DIGIT_9 && press) {
+		uint8_t max = utc_edit_row == UTC_DATE ? 8u : 6u;
+		if (utc_digits_n < max)
+			utc_digits[utc_digits_n++] = (char)('0' + ev->action - ACT_DIGIT_0);
+		ui_dirty();
+		return true;
+	}
+	if (ev->action == ACT_BACK && ev->gesture == GESTURE_PRESS) {
+		if (utc_digits_n != 0u) {
+			utc_digits_n--;
+		} else {
+			utc_edit_row = UTC_ROWS;
+		}
+		ui_dirty();
+		return true;
+	}
+	return false;
+}
+
+const ui_scr_def_t ui_satellite_time_screen = {
+	.name = "satellite-time", .flags = SF_LIST | SF_FIELD, .prefix = TRN(SATELLITE_MANUAL_UTC, "Manual UTC"),
+	.hint = TRN(HINT_OK_CHANGE_BACK, "OK change  Back"), .count = utc_editor_count, .item = utc_editor_item,
+	.select = utc_editor_select, .key = utc_editor_key, .enter = utc_editor_enter,
+};
+#endif
+
 static uint16_t satellite_pass_count(void)
 {
 	uint8_t status, completed, total, passes;
@@ -439,7 +602,7 @@ void ui_satellite_passes_tick(void)
 	uint8_t status, total, passes;
 	ui_svc_satellite_scan_state(&status, NULL, &total, &passes);
 	if (status == RADIO_SAT_SCAN_COMPLETE && total != 0u && passes != 0u) {
-		if (frame->focus == 0u) {
+		if (frame->focus < 1u) {
 			frame->focus = 1u;
 			ui_dirty();
 		}
@@ -494,7 +657,7 @@ static void satellite_pass_item(uint16_t row_index, ui_item_t *item)
 	if (status != RADIO_SAT_SCAN_COMPLETE) {
 		item->flags = UI_ITEM_INFO;
 		if (status == RADIO_SAT_SCAN_UNAVAILABLE) {
-			str_copy(item->label, sizeof(item->label), TR(GPS_TIME_UNAVAILABLE, "GPS/time unavailable"));
+			str_copy(item->label, sizeof(item->label), TR(POSITION_TIME_UNAVAILABLE, "Position/time unavailable"));
 		} else {
 			str_copy(item->label, sizeof(item->label), TR(PREDICTING_PASSES_2, "Predicting passes"));
 			sbuf_t b;
@@ -541,7 +704,7 @@ static void satellite_pass_select(uint16_t row_index, bool hold)
 		return;
 	uint8_t status, passes;
 	ui_svc_satellite_scan_state(&status, NULL, NULL, &passes);
-	if (status != RADIO_SAT_SCAN_COMPLETE || passes == 0u || row_index > passes)
+	if (status != RADIO_SAT_SCAN_COMPLETE || passes == 0u || row_index == 0u || row_index > passes)
 		return;
 	radio_satellite_pass_t pass;
 	if (!ui_svc_satellite_pass((uint8_t)(row_index - 1u), &pass))
@@ -558,12 +721,14 @@ static void satellite_passes_enter(void)
 	pass_tle_age_available = false;
 	pass_tle_age_days = 0u;
 	ui_svc_satellite_scan(true);
+	ui_frame()->focus = 0u;
+	ui_satellite_passes_tick();
 }
 
 static bool satellite_passes_key(const input_event_t *ev)
 {
-	(void)ev;
 	ui_satellite_passes_tick();
+	(void)ev;
 	return false;
 }
 

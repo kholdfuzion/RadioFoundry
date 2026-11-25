@@ -71,8 +71,10 @@ uint8_t position_fix(position_fix_t *out, uint32_t now_ms);
 #if CONFIG_SATELLITE_TLE
 // For satellite prediction: use the selected source, falling back to an altitude-bearing fixed position
 uint8_t position_fix_for_satellite(position_fix_t *out, uint32_t now_ms);
-// Current date and UTC from a fresh GPS or host NMEA stream, independent of the selected coordinate source
+// Current date and UTC from fresh GPS or host NMEA, falling back to a manually set clock for this power session
 bool position_utc_fields(uint32_t *date_ddmmyy, uint32_t *utc_hms, uint32_t now_ms);
+// Set the session's UTC fallback (date ddmmyy, time hhmmss); false for an invalid calendar or time
+bool position_set_manual_utc(uint32_t date_ddmmyy, uint32_t utc_hms, uint32_t now_ms);
 #endif
 // The same for a DMR report (LRRP), with the ambiguity setting applied; err_m the error estimate in meters, the blur
 // included

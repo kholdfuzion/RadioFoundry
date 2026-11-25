@@ -15,7 +15,7 @@ Tracking needs three independent inputs:
 |---|---|
 | Orbital elements | A valid, paired two-line element set (TLE) and its epoch. Reject malformed or incomplete sets. The element epoch and current UTC determine whether the prediction is usable. |
 | Observer location | Latitude, longitude and altitude from the selected position source. A missing or stale position stops pass and Doppler updates; fixed position is usable when selected. |
-| Current time | Valid UTC. A local monotonic tick may schedule work but is not a substitute for UTC in orbit propagation. |
+| Current time | Fresh GPS or host NMEA UTC, or a manually entered UTC clock for the current power session. A local monotonic tick may schedule work but is not a substitute for UTC in orbit propagation. |
 
 Satellite calculations are pure, bounded work: they take a TLE, observer state and UTC instant, then return a result.
 They do not read board registers, access settings storage, wait, or tune hardware. Position remains owned by
@@ -119,8 +119,10 @@ Reacquiring valid inputs may resume tracking only while the same satellite and f
 
 ## 5. User-facing behavior
 
-Tools > Satellite first predicts passes for every locally installed TLE using one current GPS position and UTC
-snapshot. The list is ordered by AOS, shows time to AOS in hours and minutes (`H:MM`) and maximum elevation, and
+Tools > Satellite first predicts passes for every locally installed TLE using one altitude-bearing observer position
+and current UTC snapshot. UTC comes from fresh GPS or host NMEA when available; Settings > Location > Set UTC opens a
+manual date and time editor whose clock runs from the monotonic timer until power-off. A fresh NMEA clock takes
+precedence over the manual clock. The list is ordered by AOS, shows time to AOS in hours and minutes (`H:MM`) and maximum elevation, and
 reports prediction progress. Missing position, altitude or valid UTC leaves the list unavailable instead of using stale
 inputs. Its AOS countdown updates as time passes from the scan's UTC snapshot. The pass list shows the age of the oldest
 stored TLE when UTC is available, updates it as time passes, and warns once per inventory generation when it reaches

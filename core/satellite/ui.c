@@ -4,6 +4,8 @@
 #include "../ui/ui_svc.h"
 #include "../ui/ui_nav.h"
 #include "satellite/tracking.h"
+#include "position/position.h"
+#include "hal_time.h"
 #include "radio/radio.h"
 #include "settings/settings.h"
 #include "hal_time.h"
@@ -182,4 +184,26 @@ bool ui_svc_satellite_replace(uint8_t index, const satellite_tle_lines_t *lines)
 bool ui_svc_satellite_update_busy(void)
 {
 	return storage_job_busy();
+}
+
+bool ui_svc_satellite_utc_fields(uint32_t *date_ddmmyy, uint32_t *utc_hms)
+{
+#if CONFIG_POSITION
+	return position_utc_fields(date_ddmmyy, utc_hms, hal_millis());
+#else
+	(void)date_ddmmyy;
+	(void)utc_hms;
+	return false;
+#endif
+}
+
+bool ui_svc_satellite_set_utc(uint32_t date_ddmmyy, uint32_t utc_hms)
+{
+#if CONFIG_POSITION
+	return position_set_manual_utc(date_ddmmyy, utc_hms, hal_millis());
+#else
+	(void)date_ddmmyy;
+	(void)utc_hms;
+	return false;
+#endif
 }

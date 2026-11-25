@@ -36,6 +36,10 @@ static struct {
 	nmea_sky_t sky;		// the satellites (GSV, GSA) for the GPS screen
 #endif
 #endif
+#if CONFIG_SATELLITE_TLE
+	bool manual_utc_valid;
+	uint32_t manual_date, manual_hms, manual_ms;
+#endif
 } p;
 
 #if CONFIG_GPS || CONFIG_POSITION_HOST
@@ -186,6 +190,78 @@ static void fixed_position(position_fix_t *out, uint32_t now_ms)
 	out->ms = now_ms;
 }
 
+#if CONFIG_SATELLITE_TLE
+static bool utc_leap_year(uint32_t year)
+{
+	return year % 4u == 0u && (year % 100u != 0u || year % 400u == 0u);
+}
+
+static bool utc_fields_valid(uint32_t date_ddmmyy, uint32_t utc_hms)
+{
+	if (date_ddmmyy > 999999u || utc_hms > 999999u)
+		return false;
+	uint32_t day = date_ddmmyy / 10000u;
+	uint32_t month = date_ddmmyy / 100u % 100u;
+	uint32_t short_year = date_ddmmyy % 100u;
+	uint32_t year = short_year >= 80u ? 1900u + short_year : 2000u + short_year;
+	uint32_t hour = utc_hms / 10000u;
+	uint32_t minute = utc_hms / 100u % 100u;
+	uint32_t second = utc_hms % 100u;
+	static const uint8_t month_days[] = { 31u, 28u, 31u, 30u, 31u, 30u,
+					      31u, 31u, 30u, 31u, 30u, 31u };
+	if (month == 0u || month > 12u || day == 0u || hour > 23u || minute > 59u || second > 59u)
+		return false;
+	return day <= month_days[month - 1u] + (month == 2u && utc_leap_year(year) ? 1u : 0u);
+}
+
+static void manual_utc_fields(uint32_t *date_ddmmyy, uint32_t *utc_hms, uint32_t now_ms)
+{
+	uint32_t elapsed_ms = now_ms - p.manual_ms;
+	if ((int32_t)elapsed_ms < 0)
+		elapsed_ms = 0u;
+	uint32_t elapsed_s = elapsed_ms / 1000u;
+	uint32_t day = p.manual_date / 10000u;
+	uint32_t month = p.manual_date / 100u % 100u;
+	uint32_t year = p.manual_date % 100u;
+	uint32_t seconds = p.manual_hms / 10000u * 3600u +
+		(p.manual_hms / 100u % 100u) * 60u + p.manual_hms % 100u;
+	uint32_t days = elapsed_s / 86400u;
+	seconds += elapsed_s % 86400u;
+	if (seconds >= 86400u) {
+		seconds -= 86400u;
+		days++;
+	}
+	while (days-- != 0u) {
+		static const uint8_t month_days[] = { 31u, 28u, 31u, 30u, 31u, 30u,
+						      31u, 31u, 30u, 31u, 30u, 31u };
+		uint32_t full_year = year >= 80u ? 1900u + year : 2000u + year;
+		uint32_t limit = month_days[month - 1u] + (month == 2u && utc_leap_year(full_year) ? 1u : 0u);
+		if (++day > limit) {
+			day = 1u;
+			if (++month > 12u) {
+				month = 1u;
+				year = (year + 1u) % 100u;
+			}
+		}
+	}
+	*date_ddmmyy = day * 10000u + month * 100u + year;
+	*utc_hms = seconds / 3600u * 10000u + seconds / 60u % 60u * 100u + seconds % 60u;
+}
+
+bool position_set_manual_utc(uint32_t date_ddmmyy, uint32_t utc_hms, uint32_t now_ms)
+{
+	if (!utc_fields_valid(date_ddmmyy, utc_hms))
+		return false;
+	LOCK();
+	p.manual_utc_valid = true;
+	p.manual_date = date_ddmmyy;
+	p.manual_hms = utc_hms;
+	p.manual_ms = now_ms;
+	UNLOCK();
+	return true;
+}
+#endif
+
 // The position in use (lock held)
 static uint8_t choose(position_fix_t *out, uint32_t now_ms)
 {
@@ -222,26 +298,25 @@ uint8_t position_fix_for_satellite(position_fix_t *out, uint32_t now_ms)
 	LOCK();
 	uint8_t src = POSITION_SRC_NONE;
 #if CONFIG_GPS
-	if (allows(POSITION_GPS) && board_has_gps() && fresh(&p.gps, now_ms)) {
+	if (allows(POSITION_GPS) && board_has_gps() && fresh(&p.gps, now_ms) &&
+	    p.gps.f.alt_m != POSITION_ALT_NONE) {
 		*out = p.gps.f;
 		src = POSITION_SRC_GPS;
 	}
 #endif
-	if (src == POSITION_SRC_NONE && allows(POSITION_FIXED) && fixed_set()) {
-		fixed_position(out, now_ms);
-		src = POSITION_SRC_FIXED;
-	}
 #if CONFIG_POSITION_HOST
-	if (src == POSITION_SRC_NONE && allows(POSITION_HOST) && fresh(&p.host, now_ms)) {
+	if (src == POSITION_SRC_NONE && allows(POSITION_HOST) && fresh(&p.host, now_ms) &&
+	    p.host.f.alt_m != POSITION_ALT_NONE) {
 		*out = p.host.f;
 		src = POSITION_SRC_HOST;
 	}
 #endif
-	if ((src == POSITION_SRC_NONE || (src != POSITION_SRC_FIXED && out->alt_m == POSITION_ALT_NONE)) &&
-	    fixed_set() && p.cfg.fix_alt_m != INT16_MIN) {
+	if (src == POSITION_SRC_NONE && fixed_set() && p.cfg.fix_alt_m != INT16_MIN) {
 		fixed_position(out, now_ms);
 		src = POSITION_SRC_FIXED;
 	}
+	if (src == POSITION_SRC_NONE)
+		src = choose(out, now_ms);
 	UNLOCK();
 	return src;
 }
@@ -267,6 +342,13 @@ bool position_utc_fields(uint32_t *date_ddmmyy, uint32_t *utc_hms, uint32_t now_
 	    (int32_t)(now_ms - p.host.utc_time_ms) < (int32_t)POSITION_STALE_MS) {
 		*date_ddmmyy = p.host.f.date;
 		*utc_hms = p.host.f.utc_hms;
+		UNLOCK();
+		return true;
+	}
+#endif
+#if CONFIG_SATELLITE_TLE
+	if (p.manual_utc_valid) {
+		manual_utc_fields(date_ddmmyy, utc_hms, now_ms);
 		UNLOCK();
 		return true;
 	}

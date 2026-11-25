@@ -73,13 +73,13 @@ TLE available while entering it.
 
 ## Track a satellite
 
-Open **OK**, **6** (Tools), then choose **Satellite**. The radio uses the selected position source for coordinates
-and altitude, and fresh GPS or computer NMEA for UTC, to predict passes for the installed TLEs. A saved fixed position
-can therefore provide the observer location while the GPS is acquiring its first fix, once the receiver provides
-current date and time. Computer fixes and UTC do not survive a restart: send fresh NMEA again, including altitude and
-date/time. The list is ordered by time to AOS and shows each pass's maximum elevation. When prediction finishes, the
-first pass is highlighted. Up and Down select a pass; **OK** opens its details and starts tracking. The selected
-satellite is remembered across power cycles.
+Open **OK**, **6** (Tools), then choose **Satellite**. The radio uses an altitude-bearing selected position source and
+current UTC to predict passes for the installed TLEs. Enter fixed coordinates and altitude in **Settings > Location >
+Fixed position**. Set a manual UTC date (`YYYY-MM-DD`) and time (`HH:MM:SS`) in **Settings > Location > Set UTC**.
+The manual clock runs while the radio is on and is not saved across a restart. Fresh GPS or computer NMEA time takes
+precedence; computer fixes do not survive a restart. The list is ordered by time to AOS and shows each pass's maximum
+elevation. When prediction finishes, the first pass is highlighted. Up and Down select a pass; **OK**
+opens its details and starts tracking. The selected satellite is remembered across power cycles.
 The firmware image contains no TLEs. Load selected records into the radio's flash store from the site's Satellite TLE
 Update page or with `tools/satellite_tle.py sync`. With an empty store, Satellite shows **No TLEs: load from site**.
 The pass list shows the age of the oldest installed TLE when current UTC is available. Ages can differ even when

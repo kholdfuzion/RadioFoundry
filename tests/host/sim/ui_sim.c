@@ -2292,6 +2292,8 @@ static bool sim_satellite_future_pass;
 static bool sim_satellite_empty;
 static uint16_t sim_satellite_tle_age_days;
 static uint32_t sim_satellite_test_id_offset;
+static bool sim_satellite_utc_valid;
+static uint32_t sim_satellite_utc_date, sim_satellite_utc_time;
 static const char *const sim_satellite_names[] = { "ISS", "NOAA 19", "SO-50", "AO-91", "AO-123" };
 static const uint32_t sim_satellite_catalog_ids[] = { 25544u, 33591u, 27607u, 43017u, 58421u };
 static const uint16_t sim_satellite_eta_minutes[] = { 14u, 36u, 53u, 71u, 96u };
@@ -2460,6 +2462,46 @@ bool ui_svc_satellite_replace(uint8_t index, const satellite_tle_lines_t *lines)
 bool ui_svc_satellite_update_busy(void)
 {
 	return false;
+}
+
+bool ui_svc_satellite_utc_fields(uint32_t *date_ddmmyy, uint32_t *utc_hms)
+{
+	if (!sim_satellite_utc_valid || date_ddmmyy == NULL || utc_hms == NULL)
+		return false;
+	*date_ddmmyy = sim_satellite_utc_date;
+	*utc_hms = sim_satellite_utc_time;
+	return true;
+}
+
+static bool sim_satellite_utc_fields_valid(uint32_t date_ddmmyy, uint32_t utc_hms)
+{
+	if (date_ddmmyy > 999999u || utc_hms > 999999u)
+		return false;
+	uint32_t day = date_ddmmyy / 10000u;
+	uint32_t month = date_ddmmyy / 100u % 100u;
+	uint32_t year = date_ddmmyy % 100u;
+	year += year >= 80u ? 1900u : 2000u;
+	uint32_t hour = utc_hms / 10000u;
+	uint32_t minute = utc_hms / 100u % 100u;
+	uint32_t second = utc_hms % 100u;
+	static const uint8_t month_days[] = { 31u, 28u, 31u, 30u, 31u, 30u,
+					      31u, 31u, 30u, 31u, 30u, 31u };
+	if (month == 0u || month > 12u || day == 0u ||
+	    hour > 23u || minute > 59u || second > 59u)
+		return false;
+	bool leap = year % 4u == 0u && (year % 100u != 0u || year % 400u == 0u);
+	uint32_t month_day_limit = month_days[month - 1u] + (month == 2u && leap ? 1u : 0u);
+	return day <= month_day_limit;
+}
+
+bool ui_svc_satellite_set_utc(uint32_t date_ddmmyy, uint32_t utc_hms)
+{
+	if (!sim_satellite_utc_fields_valid(date_ddmmyy, utc_hms))
+		return false;
+	sim_satellite_utc_valid = true;
+	sim_satellite_utc_date = date_ddmmyy;
+	sim_satellite_utc_time = utc_hms;
+	return true;
 }
 #endif
 
@@ -2652,6 +2694,9 @@ void sim_reset(const sim_geom_t *g, sim_map_t map)
 	sim_satellite_future_pass = false;
 	sim_satellite_empty = false;
 	sim_satellite_tle_age_days = 1u;
+	sim_satellite_utc_valid = false;
+	sim_satellite_utc_date = 0u;
+	sim_satellite_utc_time = 0u;
 	memset(&satellite_view, 0, sizeof satellite_view);
 #endif
 	vfo_mode = RADIO_MODE_FM;	// a fresh VFO
@@ -2732,6 +2777,7 @@ void sim_reset(const sim_geom_t *g, sim_map_t map)
 	ui_svc_setting_set(UI_SET_POS_SOURCE, 0);
 	ui_svc_setting_set(UI_SET_POS_FIXED_LAT, 0);
 	ui_svc_setting_set(UI_SET_POS_FIXED_LON, 0);
+	ui_svc_setting_set(UI_SET_POS_FIXED_ALT, INT16_MIN);
 	ui_svc_setting_set(UI_SET_POS_DMR_CALLS, 0);
 	ui_svc_setting_set(UI_SET_LONG_PRESS_MS, 600);	// settings a flow changes start from their defaults
 	ui_svc_setting_set(UI_SET_AUTO_LOCK_S, 0);
@@ -3048,6 +3094,7 @@ static bool check(const char *kv, char *err, size_t len)
 	else if (strcmp(key, "aprs_ssid") == 0) snprintf(got, sizeof got, "%u", aprs_sim.cfg.ssid);
 	else if (strcmp(key, "pos_lat") == 0) snprintf(got, sizeof got, "%d", (int)ui_svc_setting_get(UI_SET_POS_FIXED_LAT));
 	else if (strcmp(key, "pos_lon") == 0) snprintf(got, sizeof got, "%d", (int)ui_svc_setting_get(UI_SET_POS_FIXED_LON));
+	else if (strcmp(key, "pos_alt") == 0) snprintf(got, sizeof got, "%d", (int)ui_svc_setting_get(UI_SET_POS_FIXED_ALT));
 	else if (strcmp(key, "pos_dmrgps") == 0) snprintf(got, sizeof got, "%d", (int)ui_svc_setting_get(UI_SET_POS_DMR_CALLS));
 	else if (strcmp(key, "aprs_kiss") == 0) snprintf(got, sizeof got, "%u", aprs_sim.cfg.kiss);
 #if CONFIG_DMR_ROAMING

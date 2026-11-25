@@ -142,7 +142,7 @@ Auto takes a fresh GPS position, else the computer's, else the fixed one.
 
 The position is not only APRS's: DMR calls and location requests (LRRP) use the same one. Its settings are under
 **Settings > Location**: **Position source** (Auto, GPS, Computer, Fixed) and **Fixed position**, a page with
-**Latitude** and **Longitude**. To set the fixed position:
+**Latitude**, **Longitude** and **Altitude**. To set the fixed coordinates:
 
 1. Open Settings > Location > Fixed position, select Latitude and press OK. The value opens for editing.
 2. Type the degrees with the digits, decimal places included: `3`,`3`,`7`,`4`,`9`,`0` is 33.7490. The decimal point is
@@ -153,6 +153,9 @@ The position is not only APRS's: DMR calls and location requests (LRRP) use the 
    the value unchanged.
 
 Four decimal places put you within about 11 m. You can also type "latitude" or "fixed" on Home to find the page.
+Altitude is a signed whole number of meters; select the row, type the digits, and press Up or Down to choose its sign.
+Long-press OK on Altitude to clear it. Satellite prediction needs an altitude-bearing position; see
+[Satellite tracking](18-satellite.md#track-a-satellite).
 
 ## GPS status
 

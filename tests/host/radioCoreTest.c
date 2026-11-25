@@ -4328,13 +4328,22 @@ static void test_position(void)
 	uint32_t auto_fallback_now = now + POSITION_STALE_MS;
 #if CONFIG_POSITION_HOST
 	position_nmea(rmc, strlen(rmc), false, auto_fallback_now);
+	position_nmea(gga, strlen(gga), false, auto_fallback_now);
+	position_cfg_t no_altitude_fallback = saved_cfg;
+	no_altitude_fallback.pref = POSITION_AUTO;
+	no_altitude_fallback.fix_alt_m = INT16_MIN;
+	position_set_cfg(&no_altitude_fallback, now);
+#if CONFIG_SATELLITE_TLE
+	CHECK(position_fix_for_satellite(&merged_fix, auto_fallback_now) == POSITION_SRC_HOST);
+	CHECK(merged_fix.alt_m == 545);
+#endif
 #endif
 	saved_cfg.pref = POSITION_AUTO;
 	position_set_cfg(&saved_cfg, now);
 #if CONFIG_POSITION_HOST
 	CHECK(position_fix(&merged_fix, auto_fallback_now) == POSITION_SRC_HOST);
 #if CONFIG_SATELLITE_TLE
-	CHECK(position_fix_for_satellite(&merged_fix, auto_fallback_now) == POSITION_SRC_FIXED);
+	CHECK(position_fix_for_satellite(&merged_fix, auto_fallback_now) == POSITION_SRC_HOST);
 #endif
 #else
 	CHECK(position_fix(&merged_fix, auto_fallback_now) == POSITION_SRC_FIXED);
@@ -4445,12 +4454,18 @@ static void test_position(void)
 	// goes out in calls, after a restart too
 	gps_here = false;
 	CHECK(!dmrDataServiceOwnPosition(&lp));
-	CHECK(ui_svc_setting_set(UI_SET_POS_FIXED_LAT, 337490000) && ui_svc_setting_set(UI_SET_POS_FIXED_LON, -843880000));
+	CHECK(ui_svc_setting_set(UI_SET_POS_FIXED_LAT, 337490000) && ui_svc_setting_set(UI_SET_POS_FIXED_LON, -843880000) &&
+	      ui_svc_setting_set(UI_SET_POS_FIXED_ALT, 1234));
 	CHECK(!ui_svc_setting_set(UI_SET_POS_FIXED_LAT, 900000001) && !ui_svc_setting_set(UI_SET_POS_SOURCE, 9));
+	CHECK(!ui_svc_setting_set(UI_SET_POS_FIXED_ALT, 32768));
 	boot();
 	req(RREQ_ZONE_POS, 3);
 	run(50);
-	CHECK(ui_svc_setting_get(UI_SET_POS_FIXED_LAT) == 337490000 && ui_svc_setting_get(UI_SET_POS_FIXED_LON) == -843880000);
+	CHECK(ui_svc_setting_get(UI_SET_POS_FIXED_LAT) == 337490000 && ui_svc_setting_get(UI_SET_POS_FIXED_LON) == -843880000 &&
+	      ui_svc_setting_get(UI_SET_POS_FIXED_ALT) == 1234);
+#if CONFIG_SATELLITE_TLE
+	CHECK(position_fix_for_satellite(&merged_fix, now) == POSITION_SRC_FIXED && merged_fix.alt_m == 1234);
+#endif
 	CHECK(dmrDataServiceOwnPosition(&lp) && lp.location.fixValid && lp.location.north && !lp.location.east);
 	CHECK(lp.location.latDegrees == 33 && lp.location.latMinutes10000 == 449400 && lp.location.lonDegrees == 84 &&
 	      lp.location.lonMinutes10000 == 232800 && lp.utcYear == 0 && !lp.hasCourse);
@@ -4498,6 +4513,15 @@ static void test_position(void)
 	position_nmea(gga, strlen(gga), false, now);
 	CHECK(position_fix(&saved_fix, now) == POSITION_SRC_HOST && saved_fix.alt_m == 545 &&
 	      saved_fix.date == 230394u && saved_fix.utc_hms == 123519u);
+#endif
+#if CONFIG_SATELLITE_TLE
+	uint32_t manual_date, manual_time;
+	uint32_t manual_now = now + POSITION_STALE_MS * 5u;
+	CHECK(position_set_manual_utc(290224u, 235958u, manual_now));
+	CHECK(position_utc_fields(&manual_date, &manual_time, manual_now + 2000u));
+	CHECK(manual_date == 10324u && manual_time == 0u);
+	CHECK(!position_set_manual_utc(290223u, 120000u, manual_now));
+	CHECK(!position_set_manual_utc(101224u, 246000u, manual_now));
 #endif
 }
 

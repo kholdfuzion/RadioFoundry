@@ -258,6 +258,8 @@ bool ui_svc_satellite_view(radio_satellite_view_t *view);
 bool ui_svc_satellite_path(satellite_path_view_t *path);
 bool ui_svc_satellite_replace(uint8_t index, const satellite_tle_lines_t *lines);
 bool ui_svc_satellite_update_busy(void);
+bool ui_svc_satellite_utc_fields(uint32_t *date_ddmmyy, uint32_t *utc_hms);
+bool ui_svc_satellite_set_utc(uint32_t date_ddmmyy, uint32_t utc_hms);
 #endif
 // The radio's GPS for the status strip: none, or one with Settings > Location > GPS off or on, however it was set
 enum { UI_GPS_POWER_NONE, UI_GPS_POWER_OFF, UI_GPS_POWER_ON };
@@ -424,7 +426,7 @@ typedef enum {
 	// (UI_FEAT_VOLUME_KNOB; settings_t.sound_flags bit SETTINGS_KNOB_LOCK, stored inverted)
 	UI_SET_KNOB_WHEN_LOCKED,
 	// The position service's settings (Settings > Location, CONFIG_POSITION; core/position/position.h): where our
-	// position comes from (position_pref_t), the fixed position in 1e-7 degree (both 0 = not set), our position
+	// position comes from (position_pref_t), the fixed position in 1e-7 degree (both 0 = not set), and our position
 	// sent in DMR voice calls 0 / 1 (ETSI GPS Info, CONFIG_DMR_GPS)
 	UI_SET_POS_SOURCE, UI_SET_POS_FIXED_LAT, UI_SET_POS_FIXED_LON, UI_SET_POS_DMR_CALLS,
 	UI_SET_RAM_COUNT,	// the ids up to here have a slot in ui_svc_ram_get/set's table; those after live elsewhere only
@@ -456,6 +458,8 @@ typedef enum {
 	// One step of a chain, set whole (its frequency and length in one write of the settings area): the value is
 	// UI_SIG_STEP(event, step, Hz, ms). Write only
 	UI_SET_SIG_STEP,
+	// Settings > Location: the fixed position's altitude in meters (INT16_MIN = not set)
+	UI_SET_POS_FIXED_ALT,
 	UI_SET_COUNT
 } ui_setting_t;
 

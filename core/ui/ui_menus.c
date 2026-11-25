@@ -63,6 +63,9 @@ extern const ui_scr_def_t ui_gps_screen;	// ui_gps.c
 #if CONFIG_SATELLITE_TLE
 extern const ui_scr_def_t ui_satellite_screen;	// ui_satellite.c
 extern const ui_scr_def_t ui_satellite_passes_screen;	// ui_satellite.c
+#if CONFIG_POSITION
+extern const ui_scr_def_t ui_satellite_time_screen;	// ui_satellite.c
+#endif
 #endif
 #if CONFIG_DUAL_WATCH
 extern const ui_scr_def_t ui_dual_screen, ui_dual_pick_screen, ui_dual_zone_screen;	// ui_dual.c
@@ -6512,7 +6515,7 @@ static const ui_scr_def_t tools_screen = {
 
 typedef enum { ST_TOGGLE, ST_LIST, ST_NUMBER, ST_ACTION } set_type_t;
 enum { SA_DIAG, SA_FIRMWARE, SA_CODEPLUG, SA_RESET, SA_MY_RADIO, SA_CRASH, SA_LANGUAGE, SA_HARDWARE, SA_FIXED_POS,
-	SA_SAVE_GPS_POS, SA_DATA_SERVICES, SA_BL_TEST, SA_SIG_BEGIN, SA_SIG_END, SA_SIG_IDLE };	// signaling tone steps, by sig_event_t
+	SA_SAVE_GPS_POS, SA_DATA_SERVICES, SA_BL_TEST, SA_SIG_BEGIN, SA_SIG_END, SA_SIG_IDLE, SA_SET_UTC };	// signaling tone steps, by sig_event_t
 
 typedef struct {
 	tr_id_t name;			// TRN; TR_NONE for a key's row (set_name)
@@ -6857,6 +6860,9 @@ static const set_item_t s_location[] = {
 		UI_SET_POS_DMR_CALLS),
 #if CONFIG_GPS && CONFIG_SATELLITE_TLE
 	ACTION(TRN(SAVE_GPS_POSITION, "Save GPS position"), "save current GPS fix as fixed fallback", SA_SAVE_GPS_POS),
+#endif
+#if CONFIG_SATELLITE_TLE
+	ACTION(TRN(SATELLITE_SET_UTC, "Set UTC"), "manual date time", SA_SET_UTC),
 #endif
 #endif
 };
@@ -7630,6 +7636,9 @@ static void group_select(uint16_t i, bool hold)
 			ui_toast(ui_svc_position_save_gps() ? TR(GPS_POSITION_SAVED, "GPS position saved") : TR(NO_CURRENT_GPS_FIX, "No current GPS fix"));
 			break;
 #endif
+#if CONFIG_POSITION && CONFIG_SATELLITE_TLE
+		case SA_SET_UTC: ui_push(SCR_SATELLITE_TIME, 0); break;
+#endif
 		default: break;
 		}
 		break;
@@ -8216,6 +8225,9 @@ const ui_scr_def_t *const ui_scr[SCR_COUNT] = {
 #if CONFIG_SATELLITE_TLE
 	[SCR_SATELLITE_PASSES] = &ui_satellite_passes_screen,
 	[SCR_SATELLITE] = &ui_satellite_screen,
+#if CONFIG_POSITION
+	[SCR_SATELLITE_TIME] = &ui_satellite_time_screen,
+#endif
 	[SCR_SATELLITE_TEXT] = &satellite_text_screen,
 #endif
 #if CONFIG_CRASH_SCREEN

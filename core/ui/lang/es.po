@@ -3017,7 +3017,7 @@ msgctxt "MYID_LABEL_DMR_ID"
 msgid "DMR ID"
 msgstr "ID DMR"
 
-#: core/ui/ui_menus.c core/ui/ui_position.c
+#: core/ui/ui_menus.c core/ui/ui_position.c core/ui/ui_satellite.c
 msgctxt "VALUE_NOT_SET"
 msgid "Not set"
 msgstr "Sin definir"
@@ -4402,7 +4402,7 @@ msgctxt "SET_TOAST_SAVED_AS_YOU_CHANGE"
 msgid "Settings are saved as you change them"
 msgstr "Los ajustes se guardan al cambiarlos"
 
-#: core/ui/ui_menus.c core/ui/ui_position.c
+#: core/ui/ui_menus.c core/ui/ui_position.c core/ui/ui_satellite.c
 msgctxt "HINT_OK_CHANGE_BACK"
 msgid "OK change  Back"
 msgstr "OK cambiar  Atrás"
@@ -4563,6 +4563,21 @@ msgid "Longitude"
 msgstr "Longitud"
 
 #: core/ui/ui_position.c
+msgctxt "POS_LABEL_ALTITUDE"
+msgid "Altitude"
+msgstr "Altitud"
+
+#: core/ui/ui_position.c
+msgctxt "POS_ALTITUDE_CLEARED"
+msgid "Altitude cleared"
+msgstr "Altitud borrada"
+
+#: core/ui/ui_position.c
+msgctxt "POS_TOAST_ALTITUDE"
+msgid "Altitude must be -32767 to 32767 m"
+msgstr "Altitud: de -32767 a 32767 m"
+
+#: core/ui/ui_position.c
 msgctxt "POS_TOAST_RANGE"
 msgid "Up to 90 N/S, 180 E/W"
 msgstr "Hasta 90 N/S, 180 E/W"
@@ -4628,6 +4643,36 @@ msgid "Predicting passes"
 msgstr "Calculando pasos"
 
 #: core/ui/ui_satellite.c
+msgctxt "SATELLITE_UTC_DATE"
+msgid "UTC date"
+msgstr "Fecha UTC"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_UTC_TIME"
+msgid "UTC time"
+msgstr "Hora UTC"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_SET_UTC"
+msgid "Set UTC"
+msgstr "Ajustar UTC"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_ENTER_UTC"
+msgid "Enter a valid UTC date and time"
+msgstr "Introduce una fecha y hora UTC válidas"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_UTC_SET"
+msgid "UTC set"
+msgstr "UTC ajustada"
+
+#: core/ui/ui_satellite.c
+msgctxt "SATELLITE_MANUAL_UTC"
+msgid "Manual UTC"
+msgstr "UTC manual"
+
+#: core/ui/ui_satellite.c
 msgctxt "SATELLITE_NO_TLE_LOAD_SITE"
 msgid "No TLEs: load from site"
 msgstr "Sin TLE: cargar desde el sitio"
@@ -4638,9 +4683,9 @@ msgid "TLE age"
 msgstr "Edad del TLE"
 
 #: core/ui/ui_satellite.c
-msgctxt "GPS_TIME_UNAVAILABLE"
-msgid "GPS/time unavailable"
-msgstr "GPS/hora no disponible"
+msgctxt "POSITION_TIME_UNAVAILABLE"
+msgid "Position/time unavailable"
+msgstr "Posición/hora no disponible"
 
 #: core/ui/ui_satellite.c
 msgctxt "NO_PASSES_IN_NEXT_24H"

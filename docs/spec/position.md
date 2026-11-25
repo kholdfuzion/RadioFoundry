@@ -39,14 +39,17 @@ Position source (setting: Auto, GPS, Computer, Fixed):
 | Computer | host NMEA: `position_nmea(..., gps = false)` | the same |
 | Fixed | the settings: latitude, longitude, altitude | position only |
 
-- Auto takes a GPS fix younger than 60 s (`POSITION_STALE_MS`), else a configured fixed position, else a host fix
-  younger than 60 s. This lets a saved location remain in use while GPS acquires a lock.
-- Satellite prediction uses the selected source when it has coordinates and altitude, then falls back to an
-  altitude-bearing fixed position if that source is unavailable. It obtains date and UTC independently from a fresh
-  GPS or host NMEA stream. RMC date and GGA/RMC time components are retained even when a sentence reports no position
-  fix, so a saved fixed coordinate can be used while the receiver acquires a fix.
+- Auto takes a GPS fix younger than 60 s (`POSITION_STALE_MS`), else a host fix younger than 60 s, else a configured
+  fixed position. This lets a saved location remain in use while GPS acquires a lock.
+- Satellite prediction first uses an allowed fresh GPS or host fix with altitude, then an altitude-bearing fixed
+  position. If none has altitude, it reports the selected source without altitude and prediction remains unavailable.
+  This avoids a fixed coordinate with no altitude shadowing a usable host fix. It obtains date and UTC independently
+  from fresh GPS or host NMEA when available. RMC date and GGA/RMC time components are retained even when a sentence
+  reports no position fix, so a saved fixed coordinate can be used while the receiver acquires a fix.
 - Host fixes and their UTC are not saved across a restart. The host must send fresh position, altitude and date/time
-  sentences again; a fixed position still needs fresh UTC for satellite prediction.
+  sentences again. Satellite prediction can instead use UTC entered on Tools > Satellite > Set UTC; this clock runs
+  from the radio's monotonic timer for the current power session and is not saved across a restart. Set it in
+  Settings > Location > Set UTC. Fresh GPS or host NMEA always takes precedence over the manual clock.
 - **Save GPS position** in Settings > Location copies the current fresh board fix into the fixed-position settings.
   In Auto, that saved coordinate is used after fresh GPS and host fixes are unavailable, including while GPS acquires
   a fix after startup. Saving requires a current GPS fix and does not change the selected source.
@@ -128,17 +131,23 @@ Settings > Location, with `CONFIG_POSITION`:
 |---|---|
 | Position source | Auto, GPS, Computer, Fixed (Computer only with the host half) |
 | Fixed position | opens the page below |
-| Save GPS position | copies the current fresh board fix to the fixed position (`CONFIG_GPS` only) |
 | Send in DMR calls | on: our position goes into every DMR voice call. Off: only on channels whose codeplug setting asks for it ([dmr-voice.md](dmr-voice.md) 3.1). "DMR position: not in this build" without `CONFIG_DMR_GPS` |
+| Save GPS position | copies the current fresh board fix to the fixed position (`CONFIG_GPS` only) |
+| Set UTC | opens the session-only UTC editor (`CONFIG_SATELLITE_TLE` only) |
 
-Fixed position (`fixed-pos`, `ui_position.c`). Rows: Latitude and Longitude ("Not set" while both are 0). OK opens an
+Fixed position (`fixed-pos`, `ui_position.c`). Rows: Latitude, Longitude and Altitude. Coordinates show "Not set" while both are 0; altitude shows "Not set" until entered. OK opens an
 editor in decimal degrees to 4 places (about 11 m): the digits fill `DD.DDDD` or `DDD.DDDD` from the left (a
 longitude's first digit of 2-9 gets its leading zero by itself), a digit that would pass 90 or 180 degrees is refused
 with a toast, Up / Down or the knob switch N / S or E / W, BACK takes the last digit back (with none typed it closes
 the editor unchanged), OK saves with the places not typed as zeros. The editor starts with the stored value shown;
 the first digit starts over.
 
-The altitude and the ambiguity are set over the debug link.
+Altitude is entered as a signed whole number of meters, from -32767 to 32767; Up / Down or the knob switches its sign.
+Long OK on the Altitude row clears it.
+
+Settings > Location > Set UTC accepts a UTC date in `YYYY-MM-DD` form and time in `HH:MM:SS` form. Both fields must be
+entered and valid before Set UTC applies them. BACK removes the last digit while editing. The entered clock runs only
+for the current power session; fresh GPS or host NMEA takes precedence. Position ambiguity is set over the debug link.
 
 ## 7. Debug link
 
@@ -162,7 +171,7 @@ ambiguity, and its NMEA operation (host half), are answered by the position serv
 
 | Test | Checks |
 |---|---|
-| `tests/host/radioCoreTest.c` `test_position` (a build without APRS) | GPS fix to LRRP and the Position screen; UTC date retained from void RMC through a valid GGA, independent UTC when Fixed is selected; saving a current GPS fix to persistent fixed fallback and using it after the live fix ages out; "Send in DMR calls" saved with its own marker and back after a restart; GPS Info sent with it on, not with it off; the fixed position on a radio without a GPS answers LRRP and goes out in calls after a restart; source GPS excludes the fixed position; a record APRS stored before; defaults |
+| `tests/host/radioCoreTest.c` `test_position` (a build without APRS) | GPS fix to LRRP and the Position screen; UTC date retained from void RMC through a valid GGA, independent UTC when Fixed is selected, manual UTC validation and rollover; saving a current GPS fix to persistent fixed fallback and using it after the live fix ages out; "Send in DMR calls" saved with its own marker and back after a restart; GPS Info sent with it on, not with it off; fixed position and altitude on a radio without GPS; satellite source selection prefers altitude-bearing fixes; source GPS excludes the fixed position; a record APRS stored before; defaults |
 | `tests/host/aprsRadioTest.c` | APRS saves its settings without changing the position's; the host NMEA path |
 | `tests/host/uiFlowTest.c` | the Settings > Location rows, the Fixed position page and its editor |
 | `tests/hil/test_gps.py` (opt-in) | the position keys and settings on the radio, with and without APRS |
